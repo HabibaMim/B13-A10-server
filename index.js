@@ -136,19 +136,19 @@ async function run() {
 })
 
 app.delete("/owner/properties/:propertyId", verifyToken, ownerVerify, async (req,res)=>{
-  const roomId = req.params.propertyId;
+  const propertyId = req.params.propertyId;
   const query = { _id: new ObjectId(propertyId),userId: req.user.id
   };
-  const result = await roomCollection.deleteOne(query);
+  const result = await propertyCollection.deleteOne(query);
  
   res.send(result);
 })
 
 app.delete("/admin/properties/:propertyId", verifyToken, adminVerify, async (req,res)=>{
-  const roomId = req.params.propertyId;
+  const propertyId = req.params.propertyId;
   const query = { _id: new ObjectId(propertyId),
   };
-  const result = await roomCollection.deleteOne(query);
+  const result = await propertyCollection.deleteOne(query);
  
   res.send(result);
 })
