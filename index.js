@@ -1,11 +1,12 @@
 const express = require('express');
 const port = process.env.PORT || 8080;
 const dotenv = require('dotenv');
+const app = express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
+const { createRemoteJWKSet, jwtVerify } = require('jose-cjs');
 
 dotenv.config();
-const app = express();
 app.use(cors());
 app.use(express.json());
 
@@ -23,13 +24,86 @@ const client = new MongoClient(uri, {
   }
 });
 
+const JWKS = createRemoteJWKSet(
+      new URL(`${process.env.CLIENT_URL}/api/auth/jwks`)
+    );
+
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer")) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+   const token = authHeader.split(" ")[1]
+
+   
+
+    if (!token) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  try {
+   
+    const { payload } = await jwtVerify(token, JWKS);
+    req.user = payload
+
+    next();
+  } catch (error) {
+    console.error('Token validation failed:', error);
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+};
+
+const ownerVerify = async (req, res, next) => {
+  const user = req.user;
+  if(user.role !=="owner"){
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  next()
+}
+
+const tenantVerify = async (req, res, next) => {
+  const user = req.user;
+  if(user.role !=="tenant"){
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  next()
+}
+
+const adminVerify = async (req, res, next) => {
+  const user = req.user;
+  if(user.role !=="admin"){
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  next()
+}
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
-    //await client.db("admin").command({ ping: 1 });
+    
     const db = client.db("rentnestdb");
+    const propertyCollection =db.collection("properties")
+    const bookingCollection =db.collection("bookings")
+
+    app.post("/owner/properties", verifyToken, ownerVerify, async(req, res) =>{
+      const data = req.body
+      const result = await propertyCollection.insertOne({...data, userId: req.user.id})
+
+      res.send(result);
+    });
+
+    app.get("/owner/properties", verifyToken, ownerVerify, async(req, res) =>{
+      console.log("req.user:", req.user);
+      const result = await propertyCollection.find({userId: req.user.id}).toArray();
+      res.send(result)
+    })
+
+
+    await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
