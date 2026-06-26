@@ -25,7 +25,8 @@ const client = new MongoClient(uri, {
 });
 
 const JWKS = createRemoteJWKSet(
-      new URL(`${process.env.CLIENT_URL}/api/auth/jwks`)
+      new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
+      { timeoutDuration: 10000 }
     );
 
 const verifyToken = async (req, res, next) => {
@@ -97,11 +98,60 @@ async function run() {
     });
 
     app.get("/owner/properties", verifyToken, ownerVerify, async(req, res) =>{
-      console.log("req.user:", req.user);
       const result = await propertyCollection.find({userId: req.user.id}).toArray();
       res.send(result)
     })
 
+    app.get("/admin/properties", verifyToken, adminVerify, async(req, res) =>{
+      const result = await propertyCollection.find().toArray();
+      res.send(result)
+    })
+
+    app.patch("/owner/properties/:propertyId", verifyToken, ownerVerify, async (req,res)=>{
+  const {propertyId} = req.params;
+  const updatedData =req.body;
+  const filter = { _id: new ObjectId(propertyId), userId: req.user.id };
+  const updatedDoc ={
+    $set :{
+      ...updatedData,
+    },
+  };
+  const result = await propertyCollection.updateOne(filter, updatedDoc);
+
+  res.send(result);
+})
+
+    app.patch("/admin/properties/:propertyId", verifyToken, adminVerify, async (req,res)=>{
+  const {propertyId} = req.params;
+  const updatedData =req.body;
+  const filter = { _id: new ObjectId(propertyId) };
+  const updatedDoc ={
+    $set :{
+      ...updatedData,
+    },
+  };
+  const result = await propertyCollection.updateOne(filter, updatedDoc);
+
+  res.send(result);
+})
+
+app.delete("/owner/properties/:propertyId", verifyToken, ownerVerify, async (req,res)=>{
+  const roomId = req.params.propertyId;
+  const query = { _id: new ObjectId(propertyId),userId: req.user.id
+  };
+  const result = await roomCollection.deleteOne(query);
+ 
+  res.send(result);
+})
+
+app.delete("/admin/properties/:propertyId", verifyToken, adminVerify, async (req,res)=>{
+  const roomId = req.params.propertyId;
+  const query = { _id: new ObjectId(propertyId),
+  };
+  const result = await roomCollection.deleteOne(query);
+ 
+  res.send(result);
+})
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
