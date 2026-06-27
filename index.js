@@ -195,10 +195,10 @@ app.patch("/favorites/:propertyId", verifyToken, tenantVerify, async (req, res) 
         return res.status(404).json({ message: 'Property Not Found!' });
     }
 
-    const existing = await favoritesCollection.findOne({
-        propertyId,
-        tenantId: req.user.id
-    });
+  const existing = await favoritesCollection.findOne({
+    propertyId: new ObjectId(propertyId), 
+    tenantId: req.user.id
+});
 
     if (existing) {
         await favoritesCollection.deleteOne({ _id: existing._id });
@@ -248,6 +248,14 @@ app.delete("/admin/properties/:propertyId", verifyToken, adminVerify, async (req
  
   res.send(result);
 })
+
+app.delete("/favorites/:propertyId", verifyToken, tenantVerify, async (req, res) => {
+    const { propertyId } = req.params;
+    const query = { propertyId: new ObjectId(propertyId), tenantId: req.user.id };
+    const result = await favoritesCollection.deleteOne(query);
+
+    res.send(result);
+});
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
