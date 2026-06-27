@@ -91,6 +91,7 @@ async function run() {
     const bookingCollection =db.collection("bookings")
     const reviewCollection = db.collection("reviews");
     const favoritesCollection = db.collection("favorites");
+    const usersCollection = db.collection("user");
 
     app.post("/owner/properties", verifyToken, ownerVerify, async(req, res) =>{
       const data = req.body
@@ -138,6 +139,20 @@ app.get("/reviews/featured", async (req, res) => {
       const result = await propertyCollection.find().toArray();
       res.send(result)
     })
+
+     app.get("/admin/users", verifyToken, adminVerify, async(req, res) =>{
+      const result = await usersCollection.find().toArray();
+      res.send(result)
+    })
+
+    app.patch("/admin/users/:userId", verifyToken, adminVerify, async (req, res) => {
+    const { userId } = req.params;
+    const { role } = req.body;
+    const filter = { _id: new ObjectId(userId) };
+    const updatedDoc = { $set: { role } };
+    const result = await usersCollection.updateOne(filter, updatedDoc);
+    res.send(result);
+});
 
     app.get("/properties", async (req, res) => {
     const { status } = req.query;
