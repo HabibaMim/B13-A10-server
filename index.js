@@ -107,6 +107,26 @@ async function run() {
       res.send(result)
     })
 
+    app.get("/properties", async (req, res) => {
+    const { status } = req.query;
+    const filter = status ? { status } : {};
+    const result = await propertyCollection.find(filter).toArray();
+    res.send(result);
+});
+
+app.get("/featured", async (req, res) => {
+  const cursor = propertyCollection.find().limit(6);
+  const result = await cursor.toArray();
+  res.send(result);
+});
+
+app.get("/properties/:propertyId", verifyToken, async (req, res) => {
+  const { propertyId } = req.params;
+  const query = { _id: new ObjectId(propertyId) };
+  const result = await propertyCollection.findOne(query);
+  res.send(result);
+});
+
     app.patch("/owner/properties/:propertyId", verifyToken, ownerVerify, async (req,res)=>{
   const {propertyId} = req.params;
   const updatedData =req.body;
@@ -134,6 +154,7 @@ async function run() {
 
   res.send(result);
 })
+
 
 app.delete("/owner/properties/:propertyId", verifyToken, ownerVerify, async (req,res)=>{
   const propertyId = req.params.propertyId;
