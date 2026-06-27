@@ -90,6 +90,7 @@ async function run() {
     const propertyCollection =db.collection("properties")
     const bookingCollection =db.collection("bookings")
     const reviewCollection = db.collection("reviews");
+    const favoritesCollection = db.collection("favorites");
 
     app.post("/owner/properties", verifyToken, ownerVerify, async(req, res) =>{
       const data = req.body
@@ -186,6 +187,49 @@ app.get("/properties/:propertyId", verifyToken, async (req, res) => {
   res.send(result);
 })
 
+app.patch("/favorites/:propertyId", verifyToken, tenantVerify, async (req, res) => {
+    const { propertyId } = req.params;
+
+    const property = await propertyCollection.findOne({ _id: new ObjectId(propertyId) });
+    if (!property) {
+        return res.status(404).json({ message: 'Property Not Found!' });
+    }
+
+    const existing = await favoritesCollection.findOne({
+        propertyId,
+        tenantId: req.user.id
+    });
+
+    if (existing) {
+        await favoritesCollection.deleteOne({ _id: existing._id });
+        return res.send({ favorited: false });
+    }
+
+    const result = await favoritesCollection.insertOne({
+        propertyId: property._id,
+        tenantId: req.user.id,
+        favoritedAt: new Date()
+    });
+
+    res.send({ favorited: true, result });
+});
+
+app.get("/favorites", verifyToken, tenantVerify, async (req, res) => {
+    const result = await favoritesCollection.aggregate([
+        { $match: { tenantId: req.user.id } },
+        {
+            $lookup: {
+                from: "properties",
+                localField: "propertyId",
+                foreignField: "_id",
+                as: "property"
+            }
+        },
+        { $unwind: "$property" }
+    ]).toArray();
+
+    res.send(result);
+});
 
 app.delete("/owner/properties/:propertyId", verifyToken, ownerVerify, async (req,res)=>{
   const propertyId = req.params.propertyId;
