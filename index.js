@@ -89,6 +89,7 @@ async function run() {
     const db = client.db("rentnestdb");
     const propertyCollection =db.collection("properties")
     const bookingCollection =db.collection("bookings")
+    const reviewCollection = db.collection("reviews");
 
     app.post("/owner/properties", verifyToken, ownerVerify, async(req, res) =>{
       const data = req.body
@@ -96,6 +97,36 @@ async function run() {
 
       res.send(result);
     });
+
+    app.post("/properties/:propertyId/reviews", verifyToken, tenantVerify, async (req, res) => {
+    const { propertyId } = req.params;
+    const { rating, comment } = req.body;
+
+    const review = {
+        propertyId,
+        rating: Number(rating),
+        comment,
+        tenantId: req.user.id,
+        tenantName: req.user.name || "Anonymous",
+        tenantEmail: req.user.email || null,
+        tenantPhoto: req.user.image || req.user.picture || null,
+        createdAt: new Date()
+    };
+
+    const result = await reviewCollection.insertOne(review);
+    res.send(result);
+});
+
+app.get("/properties/:propertyId/reviews", async (req, res) => {
+    const { propertyId } = req.params;
+    const result = await reviewCollection.find({ propertyId }).toArray();
+    res.send(result);
+});
+
+app.get("/reviews/featured", async (req, res) => {
+    const result = await reviewCollection.find().limit(4).toArray();
+    res.send(result);
+});
 
     app.get("/owner/properties", verifyToken, ownerVerify, async(req, res) =>{
       const result = await propertyCollection.find({userId: req.user.id}).toArray();
