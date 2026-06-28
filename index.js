@@ -188,6 +188,8 @@ app.get("/properties/:propertyId", verifyToken, async (req, res) => {
   res.send(result);
 })
 
+
+
     app.patch("/admin/properties/:propertyId", verifyToken, adminVerify, async (req,res)=>{
   const {propertyId} = req.params;
   const updatedData =req.body;
@@ -231,6 +233,45 @@ app.patch("/favorites/:propertyId", verifyToken, tenantVerify, async (req, res) 
 
 app.get("/favorites", verifyToken, tenantVerify, async (req, res) => {
     const result = await favoritesCollection.aggregate([
+        { $match: { tenantId: req.user.id } },
+        {
+            $lookup: {
+                from: "properties",
+                localField: "propertyId",
+                foreignField: "_id",
+                as: "property"
+            }
+        },
+        { $unwind: "$property" }
+    ]).toArray();
+
+    res.send(result);
+});
+
+//booking
+
+app.post("/bookings/:propertyId", verifyToken, tenantVerify, async (req, res) => {
+    const { propertyId } = req.params;
+    const bookingsData = req.body;
+
+    const property = await propertyCollection.findOne({ _id: new ObjectId(propertyId) });
+    if (!property) {
+        return res.status(404).json({ message: 'Property Not Found!' });
+    }
+
+    const result = await bookingCollection.insertOne({
+        ...bookingsData,
+        propertyId: property._id,
+        tenantId: req.user.id,
+        bookedAt: new Date(),
+    });
+
+    res.send(result);
+});
+
+app.get("/bookings", verifyToken, tenantVerify, async (req, res) => {
+
+    const result = await bookingCollection.aggregate([
         { $match: { tenantId: req.user.id } },
         {
             $lookup: {
