@@ -287,6 +287,40 @@ app.get("/bookings", verifyToken, tenantVerify, async (req, res) => {
     res.send(result);
 });
 
+app.get("/admin/bookings", verifyToken, adminVerify, async (req, res) => {
+    const result = await bookingCollection.aggregate([
+        
+        {
+            $lookup: {
+                from: "properties",
+                localField: "propertyId",
+                foreignField: "_id",
+                as: "property"
+            }
+        },
+        { $unwind: "$property" }
+    ]).toArray();
+
+    res.send(result);
+});
+
+app.get("/owner/bookings", verifyToken, ownerVerify, async (req, res) => {
+    const result = await bookingCollection.aggregate([
+        {
+            $lookup: {
+                from: "properties",
+                localField: "propertyId",
+                foreignField: "_id",
+                as: "property"
+            }
+        },
+        { $unwind: "$property" },
+        { $match: { "property.userId": req.user.id } }
+    ]).toArray();
+
+    res.send(result);
+});
+
 app.delete("/owner/properties/:propertyId", verifyToken, ownerVerify, async (req,res)=>{
   const propertyId = req.params.propertyId;
   const query = { _id: new ObjectId(propertyId),userId: req.user.id
