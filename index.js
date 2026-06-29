@@ -155,13 +155,38 @@ app.get("/reviews/featured", async (req, res) => {
     res.send(result);
 });
 
-    app.get("/properties", async (req, res) => {
-    const { status } = req.query;
-    const filter = status ? { status } : {};
-    const result = await propertyCollection.find(filter).toArray();
-    res.send(result);
-});
+app.get("/properties", async (req, res) => {
+const { status, search, propertyType } = req.query;
 
+    const query = {};
+
+    if(status){
+        query.status = status;
+    }
+
+    if(search && search !== "undefined" && search !== ""){
+        query.location = {
+            $regex: search,
+            $options: "i"
+        };
+    }
+
+    if(propertyType && propertyType !== "undefined" && propertyType !== ""){
+        query.propertyType = {
+            $regex: propertyType,
+            $options: "i"
+        };
+    }
+
+    
+
+    const result = await propertyCollection
+        .find(query)
+        .toArray();
+
+    res.send(result);
+
+});
 app.get("/featured", async (req, res) => {
   const cursor = propertyCollection.find().limit(6);
   const result = await cursor.toArray();
