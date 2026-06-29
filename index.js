@@ -83,7 +83,7 @@ const adminVerify = async (req, res, next) => {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    //await client.connect();
     // Send a ping to confirm a successful connection
     
     const db = client.db("rentnestdb");
@@ -273,6 +273,12 @@ app.post("/bookings/:propertyId", verifyToken, tenantVerify, async (req, res) =>
     res.send(result);
 });
 
+//transactions
+app.get("/admin/bookings/payments", verifyToken, adminVerify, async (req, res) => {
+    const result = await bookingCollection.find({ paymentStatus: "Paid" }).toArray();
+     console.log("Found payments:", result.length);
+    res.send(result);
+});
 //for stripe
 
 app.patch("/bookings/:bookingId/payment", verifyToken, tenantVerify, async (req, res) => {
@@ -374,7 +380,7 @@ app.delete("/favorites/:propertyId", verifyToken, tenantVerify, async (req, res)
     res.send(result);
 });
 
-    await client.db("admin").command({ ping: 1 });
+    //await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
