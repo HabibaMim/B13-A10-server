@@ -156,7 +156,8 @@ app.get("/reviews/featured", async (req, res) => {
 });
 
 app.get("/properties", async (req, res) => {
-const { status, search, propertyType } = req.query;
+
+    const { status, search, propertyType, minPrice, maxPrice } = req.query;
 
     const query = {};
 
@@ -178,7 +179,21 @@ const { status, search, propertyType } = req.query;
         };
     }
 
-    
+    if(minPrice || maxPrice){
+
+        query.rentPrice = {};
+
+        if(minPrice){
+            query.rentPrice.$gte = Number(minPrice);
+        }
+
+        if(maxPrice){
+            query.rentPrice.$lte = Number(maxPrice);
+        }
+
+    }
+
+    console.log(query);
 
     const result = await propertyCollection
         .find(query)
