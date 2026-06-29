@@ -92,6 +92,7 @@ async function run() {
     const reviewCollection = db.collection("reviews");
     const favoritesCollection = db.collection("favorites");
     const usersCollection = db.collection("user");
+    const subscriptionsCollection = db.collection("subscriptions");
 
     app.post("/owner/properties", verifyToken, ownerVerify, async(req, res) =>{
       const data = req.body
@@ -248,6 +249,7 @@ app.get("/favorites", verifyToken, tenantVerify, async (req, res) => {
     res.send(result);
 });
 
+
 //booking
 
 app.post("/bookings/:propertyId", verifyToken, tenantVerify, async (req, res) => {
@@ -264,10 +266,26 @@ app.post("/bookings/:propertyId", verifyToken, tenantVerify, async (req, res) =>
         propertyId: property._id,
         tenantId: req.user.id,
         bookedAt: new Date(),
+        propertyTitle: property.title,
+        rentPriceId: property.rentPrice,
     });
 
     res.send(result);
 });
+
+//for stripe
+
+app.patch("/bookings/:bookingId/payment", verifyToken, tenantVerify, async (req, res) => {
+    const { bookingId } = req.params;
+
+    const result = await bookingCollection.updateOne(
+        { _id: new ObjectId(bookingId) },
+        { $set: { paymentStatus: "Paid" } }
+    );
+
+    res.send(result);
+});
+
 
 app.get("/bookings", verifyToken, tenantVerify, async (req, res) => {
 
@@ -318,6 +336,15 @@ app.get("/owner/bookings", verifyToken, ownerVerify, async (req, res) => {
         { $match: { "property.userId": req.user.id } }
     ]).toArray();
 
+    res.send(result);
+});
+
+    app.patch("/owner/bookings/:bookingId", verifyToken, ownerVerify, async (req, res) => {
+    const { bookingId } = req.params;
+    const { bookingStatus } = req.body;
+    const filter = { _id: new ObjectId(bookingId) };
+    const updatedDoc = { $set: { bookingStatus} };
+    const result = await bookingCollection.updateOne(filter, updatedDoc);
     res.send(result);
 });
 
